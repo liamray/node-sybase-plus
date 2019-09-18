@@ -48,7 +48,6 @@ public class SybaseDB {
 		this.props = props;
 		this.props.put("user", username);
 		this.props.put("password", password);		
-		df.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 
 	public boolean connect()

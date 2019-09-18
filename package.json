@@ -1,7 +1,7 @@
 {
-  "name": "sybase",
-  "version": "1.2.1",
-  "description": "A simple node.js wrapper around a java/jconnect app that provides easy access to Sybase Databases without having to install odbc or freetds.",
+  "name": "sybase-plus",
+  "version": "1.3.0",
+  "description": "A simple node.js wrapper around a java/jconnect app that provides easy access to Sybase Databases without having to install odbc or freetds. This forked version of node-sybase contains few fixes by Liam Ray. See readme file.",
   "dependencies": {
     "JSONStream": "latest"
   },
@@ -9,22 +9,22 @@
   "scripts": {
     "test": "mocha"
   },
-  "homepage": "http://github.com/rodhoward/node-sybase/",
+  "homepage": "https://github.com/liamray/node-sybase-plus",
   "repository": {
     "type": "git",
-    "url": "git://github.com/rodhoward/node-sybase.git"
+    "url": "git://github.com/liamray/node-sybase-plus.git"
   },
   "license": "MIT",
-  "keywords" : [
-  	"database",
-  	"sybase",
-  	"jconnect",
-  	"sql",
-  	"java"
+  "keywords": [
+    "database",
+    "sybase",
+    "jconnect",
+    "sql",
+    "java"
   ],
   "author": "Rod Howard <rod.howard@gmail.com>",
   "bugs": {
-    "url": "https://github.com/rodhoward/node-sybase/issues"
+    "url": "https://github.com/liamray/node-sybase-plus/issues"
   },
   "devDependencies": {
     "bluebird": "^3.4.6",

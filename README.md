@@ -3,6 +3,11 @@ node-sybase
 
 A simple node.js wrapper around a Java application that provides easy access to Sybase databases via jconn3. The main goal is to allow easy installation without the requirements of installing and configuring odbc or freetds. You do however have to have java 1.5 or newer installed.
 
+node-sybase-plus fixes
+------------
+
+* removed a <b>[df.setTimeZone(TimeZone.getTimeZone("UTC"));]</b> from the <b>[SybaseDB.java]</b> class ( it brings wrong results when you don't need a Universal Time Zone )
+
 requirements
 ------------
 
