@@ -3,7 +3,8 @@
   "version": "1.3.0",
   "description": "A simple node.js wrapper around a java/jconnect app that provides easy access to Sybase Databases without having to install odbc or freetds. This forked version of node-sybase contains few fixes by Liam Ray. See readme file.",
   "dependencies": {
-    "JSONStream": "latest"
+    "JSONStream": "latest",
+    "json2csv": "^4.5.4"
   },
   "main": "src/SybaseDB.js",
   "scripts": {

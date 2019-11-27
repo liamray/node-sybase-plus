@@ -2,20 +2,19 @@ var spawn = require('child_process').spawn;
 var JSONStream = require('JSONStream');
 var fs = require("fs");
 var path = require("path");
+const Json2csvParser = require('json2csv').Parser;
 
-function Sybase(host, port, dbname, username, password, logTiming, pathToJavaBridge)
-{
+function Sybase(host, port, dbname, username, password, logTiming, pathToJavaBridge) {
     this.connected = false;
     this.host = host;
     this.port = port;
     this.dbname = dbname;
     this.username = username;
-    this.password = password;    
+    this.password = password;
     this.logTiming = (logTiming == true);
-    
+
     this.pathToJavaBridge = pathToJavaBridge;
-    if (this.pathToJavaBridge === undefined)
-    {
+    if (this.pathToJavaBridge === undefined) {
         this.pathToJavaBridge = path.resolve(__dirname, "..", "JavaSybaseLink", "dist", "JavaSybaseLink.jar");
     }
 
@@ -25,58 +24,80 @@ function Sybase(host, port, dbname, username, password, logTiming, pathToJavaBri
     this.jsonParser = JSONStream.parse();
 }
 
-Sybase.prototype.connect = function(callback)
-{
+Sybase.prototype.connect = function (callback) {
     var that = this;
-    this.javaDB = spawn('java',["-jar",this.pathToJavaBridge, this.host, this.port, this.dbname, this.username, this.password]);
+    this.javaDB = spawn('java', ["-jar", this.pathToJavaBridge, this.host, this.port, this.dbname, this.username, this.password]);
 
     var hrstart = process.hrtime();
-	this.javaDB.stdout.once("data", function(data) {
-		if ((data+"").trim() != "connected")
-		{
-			callback(new Error("Error connecting " + data));
-			return;
-		}
+    this.javaDB.stdout.once("data", function (data) {
+        if ((data + "").trim() != "connected") {
+            callback(new Error("Error connecting " + data));
+            return;
+        }
 
-		that.javaDB.stderr.removeAllListeners("data");
-		that.connected = true;
+        that.javaDB.stderr.removeAllListeners("data");
+        that.connected = true;
 
-		// set up normal listeners.		
-		that.javaDB.stdout.setEncoding('utf8').pipe(that.jsonParser).on("data", function(jsonMsg) { that.onSQLResponse.call(that, jsonMsg); });
-		that.javaDB.stderr.on("data", function(err) { that.onSQLError.call(that, err); });
+        // set up normal listeners.
+        that.javaDB.stdout.setEncoding('utf8').pipe(that.jsonParser).on("data", function (jsonMsg) {
+                that.onSQLResponse.call(that, jsonMsg);
+            }
+        );
+        that.javaDB.stderr.on("data", function (err) {
+            that.onSQLError.call(that, err);
+        });
 
-		callback(null, data);
-	});
+        callback(null, data);
+    });
 
-	// handle connection issues.
-    this.javaDB.stderr.once("data", function(data) {
-    	that.javaDB.stdout.removeAllListeners("data");
-    	that.javaDB.kill();
-    	callback(new Error(data));
-    });   
+    // handle connection issues.
+    this.javaDB.stderr.once("data", function (data) {
+        that.javaDB.stdout.removeAllListeners("data");
+        that.javaDB.kill();
+        callback(new Error(data));
+    });
 };
 
-Sybase.prototype.disconnect = function()
-{
-	this.javaDB.kill();
-	this.connected = false;	
+Sybase.prototype.disconnect = function () {
+    this.javaDB.kill();
+    this.connected = false;
 }
 
-Sybase.prototype.isConnected = function() 
-{
+Sybase.prototype.isConnected = function () {
     return this.connected;
 };
 
-Sybase.prototype.query = function(sql, callback) 
-{
-    if (this.isConnected === false)
-    {
-    	callback(new Error("database isn't connected."));
-    	return;
-    }    
+Sybase.prototype.query2Csv = function (sql, csvOpts, callback) {
+    function imdtCallback(err1, data, columns) {
+        if (err1) {
+            callback(err1, data);
+            return;
+        }
+
+        if (!csvOpts.fields) {
+            csvOpts.fields = columns;
+        }
+
+        try {
+            const parser = new Json2csvParser(csvOpts);
+            const csv = parser.parse(data);
+            callback(err1, csv, columns);
+        } catch (err2) {
+            callback(err2)
+        }
+    }
+
+    this.query(sql, imdtCallback);
+};
+
+Sybase.prototype.query = function (sql, callback) {
+    if (this.isConnected === false) {
+        callback(new Error("database isn't connected."));
+        return;
+    }
     var hrstart = process.hrtime();
     this.queryCount++;
-    
+
     var msg = {};
     msg.msgId = this.queryCount;
     msg.sql = sql;
@@ -85,52 +106,55 @@ Sybase.prototype.query = function(sql, callback)
     msg.callback = callback;
     msg.hrstart = hrstart;
 
-    console.log("this: " + this + " currentMessages: " +  this.currentMessages + " this.queryCount: " + this.queryCount);
-    
+    console.log("this: " + this + " currentMessages: " + this.currentMessages + " this.queryCount: " + this.queryCount);
+
     this.currentMessages[msg.msgId] = msg;
 
     this.javaDB.stdin.write(strMsg + "\n");
     console.log("sql request written: " + strMsg);
 };
 
-Sybase.prototype.onSQLResponse = function(jsonMsg)
-{
+Sybase.prototype.onSQLResponse = function (jsonMsg) {
     var err = null;
-	var request = this.currentMessages[jsonMsg.msgId];
-	delete this.currentMessages[jsonMsg.msgId];
+    var request = this.currentMessages[jsonMsg.msgId];
+    delete this.currentMessages[jsonMsg.msgId];
 
-	var result = jsonMsg.result;
-	if (result.length === 1)
-		result = result[0]; //if there is only one just return the first RS not a set of RS's
+    var result = jsonMsg.result;
+    if (result.length === 1)
+        result = result[0]; //if there is only one just return the first RS not a set of RS's
 
-	var currentTime = (new Date()).getTime();
-	var sendTimeMS = currentTime - jsonMsg.javaEndTime;
-	hrend = process.hrtime(request.hrstart);
-	var javaDuration = (jsonMsg.javaEndTime - jsonMsg.javaStartTime);
+    var columns = jsonMsg.columns;
+    if (columns.length === 1) {
+        columns = columns[0];
+    }
+
+    var currentTime = (new Date()).getTime();
+    var sendTimeMS = currentTime - jsonMsg.javaEndTime;
+    hrend = process.hrtime(request.hrstart);
+    var javaDuration = (jsonMsg.javaEndTime - jsonMsg.javaStartTime);
 
     if (jsonMsg.error !== undefined)
         err = new Error(jsonMsg.error);
 
 
-	if (this.logTiming)
-		console.log("Execution time (hr): %ds %dms dbTime: %dms dbSendTime: %d sql=%s", hrend[0], hrend[1]/1000000, javaDuration, sendTimeMS, request.sql);
-	request.callback(err, result);
+    if (this.logTiming)
+        console.log("Execution time (hr): %ds %dms dbTime: %dms dbSendTime: %d sql=%s", hrend[0], hrend[1] / 1000000, javaDuration, sendTimeMS, request.sql);
+    request.callback(err, result, columns);
 };
 
-Sybase.prototype.onSQLError = function(data)
-{
-	var error = new Error(data);
+Sybase.prototype.onSQLError = function (data) {
+    var error = new Error(data);
 
     var callBackFuncitons = [];
-	for (var k in this.currentMessages){
-    	if (this.currentMessages.hasOwnProperty(k)) { 		
+    for (var k in this.currentMessages) {
+        if (this.currentMessages.hasOwnProperty(k)) {
             callBackFuncitons.push(this.currentMessages[k].callback);
-    	}
-	}
+        }
+    }
 
     // clear the current messages before calling back with the error.
     this.currentMessages = [];
-    callBackFuncitons.forEach(function(cb) {
+    callBackFuncitons.forEach(function (cb) {
         cb(error);
     });
 };

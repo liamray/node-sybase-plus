@@ -24,7 +24,6 @@ public class ExecSQLCallable implements Callable<String> {
         this.conn = conn;
         this.df = df;
         this.request = request;
-        //gson = new GsonBuilder().create();
     }
 
     public String call() throws Exception {
@@ -34,17 +33,15 @@ public class ExecSQLCallable implements Callable<String> {
         return result;
     }
 
-    private JSONObject makeItem(String key, Object val) {
-        JSONObject item = new JSONObject();
-        item.put(key, val);
-        return item;
-    }
-
     private String execSQLJsonSimple() {
         JSONObject response = new JSONObject();
         response.put("msgId", request.msgId);
         JSONArray rss = new JSONArray();
         response.put("result", rss);
+
+        // columns
+        JSONArray columnsArray = new JSONArray();
+        response.put("columns", columnsArray);
 
         try {
             Statement stmt = conn.createStatement();
@@ -59,16 +56,18 @@ public class ExecSQLCallable implements Callable<String> {
 
                 // get column names;
                 int colCount = meta.getColumnCount();
-                String[] columns = new String[colCount + 1];
-                for (int c = 1; c < colCount + 1; c++)
-                    columns[c] = meta.getColumnLabel(c);
+                String[] columns = new String[colCount];
+                for (int c = 0; c < colCount; c++)
+                    columns[c] = meta.getColumnLabel(c + 1);
+
+                columnsArray.add(columns);
 
                 JSONArray jsonRS = new JSONArray();
-
                 rss.add(jsonRS);
                 while (rs.next()) {
-                    JSONArray row = new JSONArray();
+                    JSONObject row = new JSONObject();
                     jsonRS.add(row);
+
                     for (int c = 1; c < colCount + 1; c++) {
                         Object val = rs.getObject(c);
                         if (val == null) continue;
@@ -78,12 +77,11 @@ public class ExecSQLCallable implements Callable<String> {
                             case SybaseDB.TYPE_TIME_STAMP:
                             case SybaseDB.TYPE_DATE:
                                 String my8601formattedDate = df.format(new Date(rs.getTimestamp(c).getTime()));
-                                row.add(makeItem(columns[c], my8601formattedDate));
+                                row.put(columns[c - 1], my8601formattedDate);
                                 break;
                             default:
-                                row.add(makeItem(columns[c], rs.getObject(c)));
+                                row.put(columns[c - 1], rs.getObject(c));
                         }
-                        //System.out.println(columns[c] + ": " + dataType);
                     }
                 }
                 rs.close();

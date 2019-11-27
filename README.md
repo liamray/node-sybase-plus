@@ -1,17 +1,12 @@
-fixes and improvements in node-sybase-plus
+Fixes and improvements in node-sybase-plus
 ------------
 
 * removed a <b>[df.setTimeZone(TimeZone.getTimeZone("UTC"));]</b> from the <b>[SybaseDB.java]</b> class ( it brings wrong results when you don't need a Universal Time Zone )
-* changed the result set format to array of arrays instead of array of objects which allows to keep a right columns order ( JSON doesn't keep fields order )
+* added <b>columns</b> parameter in a query callback function. The reason is JSON result doesn't keep right columns order. Example:<br/>
+db.query("select * ...", function (err, data, <b>columns</b>) {...
+* added a <b>query2Csv(query, csvOpts, callback)</b> function which produces a CSV output.<br/>
+The <b>csvOpts</b> are described in [json2csv](https://www.npmjs.com/package/json2csv) package ( the <b>fields</b> parameter in <b>csvOps</b> is provided automatically by the framework if not specified )
 
-Before:<br/>
-<b>result = [ { "A": "hello", "B": "world"}, ... ]</b>
-
-After:<br/>
-<b>result = [ [ {"B": "world"}, {"A": "hello"} ], ... ]</b>
-
-For the <b>"select B, A from..."</b> SQL query you will get wrong columns order in the first example because JSON doesn't keep fields order.
-In the second example you will get the right columns order.
 
 node-sybase
 ---------
