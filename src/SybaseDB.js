@@ -67,13 +67,14 @@ Sybase.prototype.isConnected = function () {
     return this.connected;
 };
 
-Sybase.prototype.query2Csv = function (sql, csvOpts, callback) {
+Sybase.prototype.query2Csv = function (sql, callback, aCsvOpts) {
     function imdtCallback(err1, data, columns) {
         if (err1) {
             callback(err1, data);
             return;
         }
 
+        const csvOpts = aCsvOpts ? aCsvOpts : {};
         if (!csvOpts.fields) {
             csvOpts.fields = columns;
         }
@@ -81,7 +82,7 @@ Sybase.prototype.query2Csv = function (sql, csvOpts, callback) {
         try {
             const parser = new Json2csvParser(csvOpts);
             const csv = parser.parse(data);
-            callback(err1, csv, columns);
+            callback(err1, csv, columns, data);
         } catch (err2) {
             callback(err2)
         }

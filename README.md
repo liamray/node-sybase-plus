@@ -4,8 +4,9 @@ Fixes and improvements in node-sybase-plus
 * removed a <b>[df.setTimeZone(TimeZone.getTimeZone("UTC"));]</b> from the <b>[SybaseDB.java]</b> class ( it brings wrong results when you don't need a Universal Time Zone )
 * added <b>columns</b> parameter in a query callback function. The reason is JSON result doesn't keep right columns order. Example:<br/>
 db.query("select * ...", function (err, data, <b>columns</b>) {...
-* added a <b>query2Csv(query, csvOpts, callback)</b> function which produces a CSV output.<br/>
-The <b>csvOpts</b> are described in [json2csv](https://www.npmjs.com/package/json2csv) package ( the <b>fields</b> parameter in <b>csvOps</b> is provided automatically by the framework if not specified )
+* added a <b>query2Csv(query, callback, csvOpts)</b> function which produces a CSV output.<br/>
+The <b>callback</b> function also brings a regular <b>jsonData</b>: callback(err, <b>csvData</b>, columns, <b>jsonData</b>) {...<br/>
+Optional <b>csvOpts</b> are described in [json2csv](https://www.npmjs.com/package/json2csv) package ( the <b>fields</b> parameter in the <b>csvOps</b> is provided automatically by the framework if not specified )<br/>
 
 
 node-sybase
